@@ -44,9 +44,10 @@ func main() {
     ...
     r.Body = req.Vals{{"n1", "v1"}, {"n2", "v2"}}.JSON() // => r.Body=`{"n1":"v1", "n2":"v2"}` 
     mw := func() {
+    	// new headers at each attempt
         r.Headers = Vals{
             req.HeaderAppJSON, 
-            {"Now", fmt.Sprint(time.Now().Unix())}
+            {"nonce", fmt.Sprint(time.Now().Unix())}
         }
     }
     r.Middleware = []func(){mw}
