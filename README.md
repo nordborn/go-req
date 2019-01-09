@@ -15,30 +15,42 @@ It mostly focused to be a robust REST API client.
 
 **Example1: Path, Params, Data, resp.JSON**
 ```Go
-r, err := req.New("http://httpbin.org")
-r.Path = "post" // => http://httpbin.org/post
-r.Params = req.Vals{{"a", "b"}, {"c": "d"}} // => http://httpbin.org/post?a=b&c=d
-r.Data = req.Vals{{"n1", "v1"}, {"n2", "v2"}} // => r.Body="n1=v1&n2=v2"
-resp, err := r.Post()
-respData := struct{
-	Data string `json:"data"`
-}{}
-err = resp.JSON(&respData) // unmarshal to the struct
+package main
+import "https://github.com/nordborn/go-req"
+
+func main() {
+    r, err := req.New("http://httpbin.org")
+    r.Path = "post" // => http://httpbin.org/post
+    r.Params = req.Vals{{"a", "b"}, {"c": "d"}} // => http://httpbin.org/post?a=b&c=d
+    r.Data = req.Vals{{"n1", "v1"}, {"n2", "v2"}} // => r.Body="n1=v1&n2=v2"
+    resp, err := r.Post()
+    respData := struct{
+    	Data string `json:"data"`
+    }{}
+    err = resp.JSON(&respData) // unmarshal to the struct
+    ...
+}
 ```
 
 
 **Example2: JSON Body, Headers, the power of Middleware (new headers on each attempt)**
 ```Go
-r, err := req.New("http://httpbin.org/get")
-r.Body = req.Vals{{"n1", "v1"}, {"n2", "v2"}}.JSON() => {"n1":"v1", "n2":"v2"}
-mw := func() {
-    r.Headers = Vals{
-    	req.HeaderAppJSON,  
-    	{"Now", fmt.Sprint(time.Now().Unix())}
+package main
+import "https://github.com/nordborn/go-req"
+
+func main() {
+	r, err := req.New("http://httpbin.org/get")
+    r.Body = req.Vals{{"n1", "v1"}, {"n2", "v2"}}.JSON() => {"n1":"v1", "n2":"v2"}
+    mw := func() {
+        r.Headers = Vals{
+        	req.HeaderAppJSON,  
+        	{"Now", fmt.Sprint(time.Now().Unix())}
+        }
     }
+    r.Middleware = []func(){mw}
+    resp, err := r.Get()
+    ...
 }
-r.Middleware = []func(){mw}
-resp, err := r.Get()
 ```
 
 
