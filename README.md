@@ -19,8 +19,7 @@ package main
 import "https://github.com/nordborn/go-req"
 
 func main() {
-    r, err := req.New("http://httpbin.org")
-    ...
+    r := req.New("http://httpbin.org")
     r.Path = "post" // => http://httpbin.org/post
     r.Params = req.Vals{{"a", "b"}, {"c": "d"}} // => http://httpbin.org/post?a=b&c=d
     r.Data = req.Vals{{"n1", "v1"}, {"n2", "v2"}} // => r.Body="n1=v1&n2=v2"
@@ -40,8 +39,7 @@ package main
 import "https://github.com/nordborn/go-req"
 
 func main() {
-    r, err := req.New("http://httpbin.org/get")
-    ...
+    r := req.New("http://httpbin.org/get")
     r.Body = req.Vals{{"n1", "v1"}, {"n2", "v2"}}.JSON() // => r.Body=`{"n1":"v1", "n2":"v2"}` 
     mw := func() {
     	// new headers at each attempt
