@@ -42,7 +42,7 @@ import "https://github.com/nordborn/go-req"
 func main() {
 	r, err := req.New("http://httpbin.org/get")
 	...
-    r.Body = req.Vals{{"n1", "v1"}, {"n2", "v2"}}.JSON() // => {"n1":"v1", "n2":"v2"}
+    r.Body = req.Vals{{"n1", "v1"}, {"n2", "v2"}}.JSON() // => r.Body=`{"n1":"v1", "n2":"v2"}`
     mw := func() {
         r.Headers = Vals{
         	req.HeaderAppJSON,  
