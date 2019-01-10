@@ -1,3 +1,7 @@
+[![Build Status](https://travis-ci.org/nordborn/go-req.svg?branch=master)](https://travis-ci.org/nordborn/go-req)
+[![Code Coverage](https://codecov.io/gh/nordborn/go-req/branch/master/graph/badge.svg)](https://codecov.io/gh/nordborn/go-req/branch/master/graph/badge.svg)
+
+
 Package req provides high level HTTP requests API
 with ideas from Python's 'requests' package.
 It mostly focused to be a robust REST API client.
