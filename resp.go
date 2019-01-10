@@ -25,6 +25,12 @@ func (resp *Resp) Text() string {
 	return resp.text
 }
 
+// Cookies returns cookies of underlying response
+// as default []*http.Cookie
+func (resp *Resp) Cookies() []*http.Cookie {
+	return resp.RespRaw.Cookies()
+}
+
 // JSON allows to unmarshal response content to a structure
 // Example:
 // data := struct {
