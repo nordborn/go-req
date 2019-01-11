@@ -54,10 +54,8 @@ func (vals Vals) JSON() string {
 	return s
 }
 
-
 // Extend adds more Vals to existing Vals
 // and returns new Vals
 func (vals Vals) Extend(more Vals) Vals {
 	return append(vals, more...)
 }
-

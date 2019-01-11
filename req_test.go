@@ -2,6 +2,7 @@ package req
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 	"testing"
@@ -26,6 +27,28 @@ func TestReqPost(t *testing.T) {
 	resp, err := r.Post()
 	if err != nil {
 		t.Fatal(err)
+	}
+	t.Log(resp.Text())
+}
+
+func TestReqGet_cookies(t *testing.T) {
+	r := New("http://httpbin.org")
+	r.Path = "get"
+	cookies := []*http.Cookie{
+		{Name: "CookieName1", Value: "CookieVal1"},
+		{Name: "CookieName2", Value: "CookieVal2"},
+	}
+	r.Cookies = cookies
+
+	resp, err := r.Get()
+	if err != nil {
+		t.Fatal(err)
+	}
+	respCookieStr := `"Cookie": "CookieName1=CookieVal1; CookieName2=CookieVal2"`
+	if !strings.Contains(resp.Text(), respCookieStr) {
+		t.Fatalf("Expected, but not found '%v', resp text: %v\n",
+			respCookieStr,
+			resp.Text())
 	}
 	t.Log(resp.Text())
 }

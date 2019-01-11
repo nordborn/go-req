@@ -1,6 +1,6 @@
-// Package req provides high level HTTP requests API
-// with ideas from Python's 'requests' package.
-// It mostly focused to be a robust REST API client.
+// Package req provides high-level API
+// mostly suitable to build robust REST API clients.
+// It was created by ideas of Python's 'requests' package.
 //
 // Important features:
 // - RetryOnStatusCodes parameter
@@ -8,7 +8,7 @@
 // - Middleware (slice of functions executing before each
 //               request attempt)
 // - Vals - ordered HTTP parameters (instead of url.Values which is a map)
-// - for now, it doesn't support sessions (and convenient cookies in a request)
+// - for now, it doesn't support sessions (you should pass cookies directly)
 //   and was developed mostly as a client for REST APIs
 //
 // ---
@@ -47,7 +47,6 @@ import (
 	"github.com/nordborn/golog"
 	"io/ioutil"
 	"net/http"
-	"net/http/cookiejar"
 	"net/url"
 	"strings"
 	"time"
@@ -58,6 +57,9 @@ var (
 	HeaderAppJSON = &val{"Content-Type", "application/json"}
 )
 
+// Req is a structure for requests.
+// Preferred usage: req.New() to create a new Req,
+// then modify necessary fields
 type Req struct {
 	// Method is one of the allowed HTTP methods:
 	// "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS" used by Send().
@@ -99,10 +101,11 @@ type Req struct {
 	RetryDelayMillis int
 	// Timeout: timeout for a request
 	Timeout time.Duration
-	// Jar is a cookies jar
-	// todo use []*http.Cookies
-	Jar *cookiejar.Jar
+	// Cookies slice (not cookiejar).
+	// Each cookie will be added to the request
+	Cookies []*http.Cookie
 	// Transport allows to set custom transport
+	// (default transport is set in New())
 	Transport *http.Transport
 	reqRaw    *http.Request
 	client    *http.Client
@@ -116,7 +119,6 @@ func New(url string) *Req {
 	// You may tune the transport yourself
 	// (set number of idle connections etc.)
 	t.DisableKeepAlives = true
-	j, _ := cookiejar.New(nil)
 
 	req := Req{
 		URL:                url,
@@ -127,7 +129,6 @@ func New(url string) *Req {
 		RetryDelayMillis:   1,
 		Timeout:            10 * time.Second,
 		Transport:          &t,
-		Jar:                j,
 	}
 
 	return &req
@@ -168,7 +169,7 @@ func (r *Req) Send() (*Resp, error) {
 			}
 		}
 
-		r.client = &http.Client{Transport: r.Transport, Timeout: r.Timeout, Jar: r.Jar}
+		r.client = &http.Client{Transport: r.Transport, Timeout: r.Timeout}
 
 		fullURL, err = buildFullURL(r.URL, r.Path, r.Params)
 		if err != nil {
@@ -187,6 +188,7 @@ func (r *Req) Send() (*Resp, error) {
 		if err != nil {
 			return errow.Wrap(err)
 		}
+		setCookies(r.reqRaw, r.Cookies)
 		setHeaders(r.reqRaw, r.Headers)
 		return nil
 	}

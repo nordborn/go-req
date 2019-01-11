@@ -60,3 +60,9 @@ func setHeaders(request *http.Request, headers Vals) {
 	}
 }
 
+// setCookies modifies request: it sets cookies
+func setCookies(request *http.Request, cookies []*http.Cookie) {
+	for _, c := range cookies {
+		request.AddCookie(c)
+	}
+}
