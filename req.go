@@ -67,49 +67,67 @@ type Req struct {
 	// Usually, you should use Get(), Post().. methods of the struct,
 	// so, basically, you don't need to set it directly.
 	Method string
+
 	// URL is a basic URL ("http://example.com")
 	URL string
+
 	// Path is URL path after domain name ("/test/me/") without get parameters
 	Path string
+
 	// Params: get parameters as Vals:
 	// ({{"par1", "val1"}, {"par2", "val2"}} => ?par1=val1&par2=val2)
 	Params Vals
+
 	// Headers: HTTP headers as Vals: req.Vals{{"Content-Type", "application/json"}}
 	Headers Vals
+
 	// ProxyURL should be string in format "http://user:name@ip:port"
 	ProxyURL string
+
 	// POST/PATCH/PUT parameters as Vals
 	Data Vals
+
 	// Body is a HTTP request body that contains urlencoded string
 	// (useful for JSON data or encoded POST/PUT/PATCH parameters).
 	// If provided, then Body will be used in request instead of Data
 	Body string
+
 	// Middleware is the slice of functions to be processed
 	// before each request and each retry attempt;
 	// they can modify Req fields.
-	// Useful for Headers and ProxyURL which should be
+	// Useful for example, for Headers and ProxyURL if they should be
 	// updated before each retry attempt
 	Middleware []func()
+
 	// RetryOnTextMarkers will trigger retry attempt if found any of
 	// text markers from the slice
+	// Default is []string{"error", "Error"}
 	RetryOnTextMarkers []string // repeat if response text contains a text marker from the list
+
 	// RetryOnStatusCodes will trigger retry attempt if found any of
 	// (from <= status code <= to) in the list of {{from, to},...}
+	// Default is [][2]int{{400, 600}}
 	RetryOnStatusCodes [][2]int
+
 	// RetryTimes: number of retry attempts before Req reports failed request
 	RetryTimes int
+
 	// RetryDelayMillis: delay in milliseconds before each retry attempt
 	RetryDelayMillis int
+
 	// Timeout: timeout for a request
 	Timeout time.Duration
+
 	// Cookies slice (not cookiejar).
 	// Each cookie will be added to the request
 	Cookies []*http.Cookie
+
 	// Transport allows to set custom transport
-	// (default transport is set in New())
+	// (default transport provided by New())
 	Transport *http.Transport
-	reqRaw    *http.Request
-	client    *http.Client
+
+	reqRaw *http.Request
+	client *http.Client
 }
 
 // New generates Req with default arguments.
