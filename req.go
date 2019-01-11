@@ -1,4 +1,4 @@
-// Package req provides high-level API
+// Package req provides simple high-level API
 // mostly suitable to build robust REST API clients.
 // It was created by ideas of Python's 'requests' package.
 //
@@ -26,11 +26,12 @@
 // err = resp.JSON(&respData) // unmarshal to the struct
 //
 // ---
-// Example2: JSON Body, Headers, the power of Middleware (new headers on each attempt)
+// Example2: JSON Body, Headers, the power of Middleware
 //
 // r := req.New("http://httpbin.org/get")
 // r.Body = req.Vals{{"n1", "v1"}, {"n2", "v2"}}.JSON() // => {"n1":"v1", "n2":"v2"}
 // mw := func() {
+//   // New headers for each attempt
 //   r.Headers = Vals{
 //     req.HeaderAppJSON,
 //     {"Now", fmt.Sprint(time.Now().Unix())}
