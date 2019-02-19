@@ -3,6 +3,7 @@ package req
 import (
 	"fmt"
 	"net/url"
+	"strings"
 )
 
 // val represents singe name:value pair
@@ -11,8 +12,17 @@ type val struct {
 	Value string
 }
 
+// hasSeqSig detects [] and {}
+func hasSeqSig(s string) bool {
+	return (strings.HasPrefix(s, "{") && strings.HasSuffix(s, "}")) ||
+		(strings.HasPrefix(s, "[") && strings.HasSuffix(s, "]"))
+}
+
 func (v *val) String() string {
-	return fmt.Sprintf(`{"%v": "%v"}`, v.Name, v.Value)
+	if hasSeqSig(v.Value) {
+		return fmt.Sprintf(`{"%s":%s}`, v.Name, v.Value)
+	}
+	return fmt.Sprintf(`{"%v":"%v"}`, v.Name, v.Value)
 }
 
 // Vals is a slice of *val.
@@ -41,14 +51,19 @@ func (vals Vals) URLEncode() (urlEncoded string) {
 // like {"v.Name": "v.Val", ...}.
 // Use it for simple cases when v.Name and v.Val can be correctly
 // converted just with fmt.Sprintf(`"%s":"%s"`, v.Name, v.Value),
-// or use json.Unmarshal for more complex cases
+// or with fmt.Sprintf(`"%s":%s`, v.Name, v.Value) if v.Value like "{...}" or "[...]".
+// In other cases use json.Unmarshal
 func (vals Vals) JSON() string {
 	s := "{"
 	for i, v := range vals {
 		if i > 0 {
 			s += ","
 		}
-		s += fmt.Sprintf(`"%s":"%s"`, v.Name, v.Value)
+		if hasSeqSig(v.Value) {
+			s += fmt.Sprintf(`"%s":%s`, v.Name, v.Value)
+		} else {
+			s += fmt.Sprintf(`"%v":"%v"`, v.Name, v.Value)
+		}
 	}
 	s += "}"
 	return s
