@@ -94,10 +94,9 @@ func New(url string) *Req {
 	req := Req{
 		URL:                url,
 		Method:             "GET",
-		RetryTimes:         3,
+		Attempts:           1,
 		RetryOnTextMarkers: []string{"error", "Error"},
 		RetryOnStatusCodes: [][2]int{{400, 600}},
-		RetryDelayMillis:   1,
 		Timeout:            10 * time.Second,
 	}
 	return &req
