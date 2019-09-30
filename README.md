@@ -83,7 +83,7 @@ func main() {
                     text markers from the slice
 - RetryOnStatusCodes: will trigger retry attempt if found any of
                     (from <= status code <= to) in the list of {{from, to},...}
-- RetryTimes: number of retry attempts before Req reports failed request
+- Attempts: number of attempts before Req reports failed request
 - RetryDelayMillis: delay in milliseconds before each retry attempt
 - Timeout: timeout for a request
 
