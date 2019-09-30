@@ -109,8 +109,8 @@ type Req struct {
 	// Default is [][2]int{{400, 600}}
 	RetryOnStatusCodes [][2]int
 
-	// RetryTimes: number of retry attempts before Req reports failed request
-	RetryTimes int
+	// Attempts: number of attempts before Req reports failed request
+	Attempts int
 
 	// RetryDelayMillis: delay in milliseconds before each retry attempt
 	RetryDelayMillis int
@@ -142,7 +142,7 @@ func New(url string) *Req {
 	req := Req{
 		URL:                url,
 		Method:             "GET",
-		RetryTimes:         3,
+		Attempts:           1,
 		RetryOnTextMarkers: []string{"error", "Error"},
 		RetryOnStatusCodes: [][2]int{{400, 600}},
 		RetryDelayMillis:   1,
@@ -212,7 +212,7 @@ func (r *Req) Send() (*Resp, error) {
 		return nil
 	}
 
-	for attempt = 1; attempt <= r.RetryTimes; attempt++ {
+	for attempt = 1; attempt <= r.Attempts; attempt++ {
 		shouldRetry := false
 
 		for _, f := range r.Middleware {

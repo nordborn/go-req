@@ -115,7 +115,7 @@ func TestReqOptions_ExpectedErr(t *testing.T) {
 func TestReqSend_ExpectErr(t *testing.T) {
 	r := New("ip-api.com")
 	r.Path = "json"
-	r.RetryTimes = 1
+	r.Attempts = 1
 
 	_, err := r.Send()
 	if err == nil {
@@ -127,7 +127,7 @@ func TestReqSend_ExpectErr(t *testing.T) {
 func TestReqSend_shouldRetryStatusCode(t *testing.T) {
 	r := New("http://httpbin.org")
 	r.Path = "get"
-	r.RetryTimes = 1
+	r.Attempts = 1
 
 	_, err := r.Post() // method not allowed
 	if err == nil {
@@ -220,7 +220,7 @@ func TestReqGet_WProxy(t *testing.T) {
 	r := New("http://ip-api.com")
 	r.Path = "json"
 	r.ProxyURL = os.Getenv("PROXY")
-	r.RetryTimes = 1
+	r.Attempts = 1
 
 	resp, err := r.Send()
 	if err != nil {
