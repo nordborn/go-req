@@ -44,23 +44,27 @@ package req
 
 import (
 	"fmt"
-	"github.com/nordborn/go-errow"
-	"github.com/nordborn/golog"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/nordborn/go-errow"
+	"github.com/nordborn/golog"
 )
 
 var (
 	// simple shortcut
-	HeaderAppJSON = &val{"Content-Type", "application/json"}
+	HeaderAppJSON = val{"Content-Type", "application/json"}
 )
 
 // Req is a structure for requests.
 // Preferred usage: req.New() to create a new Req,
-// then modify necessary fields
+// then modify necessary fields.
+// Builder funcs With... can be used.
+// It's safe to modify fields before Send()
+// (final raw request is builing at that moment)
 type Req struct {
 	// Method is one of the allowed HTTP methods:
 	// "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS" used by Send().
@@ -84,12 +88,12 @@ type Req struct {
 	// ProxyURL should be string in format "http://user:name@ip:port"
 	ProxyURL string
 
-	// POST/PATCH/PUT parameters as Vals
-	Data Vals
+	// POST/PATCH/PUT parameters as urlencoded Vals
+	Form Vals
 
 	// Body is a HTTP request body that contains urlencoded string
 	// (useful for JSON data or encoded POST/PUT/PATCH parameters).
-	// If provided, then Body will be used in request instead of Data
+	// If provided, then Body will be used in request instead of Form
 	Body string
 
 	// Middleware is the slice of functions to be processed
@@ -97,6 +101,7 @@ type Req struct {
 	// they can modify Req fields.
 	// Useful for example, for Headers and ProxyURL if they should be
 	// updated before each retry attempt
+	// (see TestReqGetJSON_MiddlewareVals)
 	Middleware []func()
 
 	// RetryOnTextMarkers will trigger retry attempt if found any of
@@ -122,23 +127,16 @@ type Req struct {
 	// Each cookie will be added to the request
 	Cookies []*http.Cookie
 
-	// Transport allows to set custom transport
-	// (default transport provided by New())
-	Transport *http.Transport
-
 	reqRaw *http.Request
-	client *http.Client
+	Client *http.Client
 }
 
 // New generates Req with default arguments.
+// Note, that using default global `http.DefaultClient` is not suitable
+// for different timeouts and proxies (client's transport-level settings).
+// In this case set custom client.
+// `Client.Transport` is expected to be `*http.Transport` to manage proxies.
 func New(url string) *Req {
-	t := http.Transport{}
-	// Disable 'keep alive' is a way to disable idle connections
-	// or they will use a huge vol of memory on frequent requests.
-	// You may tune the transport yourself
-	// (set number of idle connections etc.)
-	t.DisableKeepAlives = true
-
 	req := Req{
 		URL:                url,
 		Method:             "GET",
@@ -146,10 +144,9 @@ func New(url string) *Req {
 		RetryOnTextMarkers: []string{"error", "Error"},
 		RetryOnStatusCodes: [][2]int{{400, 600}},
 		RetryDelayMillis:   1,
-		Timeout:            10 * time.Second,
-		Transport:          &t,
+		Timeout:            30 * time.Second,
+		Client:             http.DefaultClient,
 	}
-
 	return &req
 }
 
@@ -178,34 +175,36 @@ func (r *Req) Send() (*Resp, error) {
 	)
 
 	// closure to call from attempt
-	build := func() error {
+	// suitable to apply middleware between attempts
+	buildReqRaw := func() error {
+		r.Client.Timeout = r.Timeout
+
 		if r.ProxyURL != "" {
 			proxyURL, err := url.Parse(r.ProxyURL)
 			if err != nil {
-				golog.Errorf("can't parse proxy url %v: %v\n", r.ProxyURL, err)
+				return errow.Wrap(err, "bad proxy url")
 			} else {
-				r.Transport.Proxy = http.ProxyURL(proxyURL)
+				t := r.Client.Transport.(*http.Transport)
+				t.Proxy = http.ProxyURL(proxyURL)
 			}
 		}
 
-		r.client = &http.Client{Transport: r.Transport, Timeout: r.Timeout}
-
 		fullURL, err = buildFullURL(r.URL, r.Path, r.Params)
 		if err != nil {
-			return errow.Wrap(err)
+			return errow.Wrap(err, "bad full url")
 		}
 
 		// set reqBody from Data if provided or directly from Body
 		var reqBody string
-		if r.Data != nil {
-			reqBody = r.Data.URLEncode()
+		if r.Form != nil {
+			reqBody = r.Form.URLEncode()
 		} else {
 			reqBody = r.Body
 		}
 
 		r.reqRaw, err = http.NewRequest(r.Method, fullURL, strings.NewReader(reqBody))
 		if err != nil {
-			return errow.Wrap(err)
+			return errow.Wrap(err, "bad req raw")
 		}
 		setCookies(r.reqRaw, r.Cookies)
 		setHeaders(r.reqRaw, r.Headers)
@@ -220,20 +219,16 @@ func (r *Req) Send() (*Resp, error) {
 		}
 
 		// first time or after middleware
-		if r.client == nil || len(r.Middleware) > 0 {
-			err = build()
-			if err != nil {
-				return nil, err // already wrapped
+		if r.reqRaw == nil || len(r.Middleware) > 0 {
+			if buildReqRaw() != nil {
+				return nil, err // already wrapped err
 			}
 		}
 
 		// applied closure to close resp Body in the loop even if err occur
 		func() {
 			golog.Tracef("do request: %v %v\n", r.Method, fullURL)
-			respRaw, err = r.client.Do(r.reqRaw)
-			if respRaw != nil {
-				defer respRaw.Body.Close()
-			}
+			respRaw, err = r.Client.Do(r.reqRaw)
 			if err != nil {
 				shouldRetry = true
 				errStr := err.Error()
@@ -245,7 +240,8 @@ func (r *Req) Send() (*Resp, error) {
 				reason = errStr
 				return
 			}
-			content, err = ioutil.ReadAll(respRaw.Body)
+			defer respRaw.Body.Close()
+			content, err = io.ReadAll(respRaw.Body)
 			if err != nil {
 				shouldRetry = true
 				golog.Warningf("att #%v: resp read err: %v: %v. Retry\n", attempt, fullURL, err)
@@ -301,38 +297,122 @@ func (r *Req) Send() (*Resp, error) {
 	return &myResp, nil
 }
 
-// Get is shortcut for GET method
+// Get is shortcut to send GET method
 func (r *Req) Get() (*Resp, error) {
 	r.Method = "GET"
 	return r.Send()
 }
 
-// Post is a shortcut for POST method
+// Post is a shortcut to send POST method
 func (r *Req) Post() (*Resp, error) {
 	r.Method = "POST"
 	return r.Send()
 }
 
-// Post is a shortcut for POST method
+// Post is a shortcut to send POST method
 func (r *Req) Put() (*Resp, error) {
 	r.Method = "PUT"
 	return r.Send()
 }
 
-// Delete is a shortcut for DELETE method
+// Delete is a shortcut to send DELETE method
 func (r *Req) Delete() (*Resp, error) {
 	r.Method = "DELETE"
 	return r.Send()
 }
 
-// Patch is a shortcut for PATCH method
+// Patch is a shortcut to send PATCH method
 func (r *Req) Patch() (*Resp, error) {
 	r.Method = "PATCH"
 	return r.Send()
 }
 
-// Options is a shortcut for OPTIONS method
+// Options is a shortcut to send OPTIONS method
 func (r *Req) Options() (*Resp, error) {
 	r.Method = "OPTIONS"
 	return r.Send()
+}
+
+// WithForm is a build func for Form field
+func (r *Req) WithForm(form Vals) *Req {
+	r.Form = form
+	return r
+}
+
+// WithBody is a build func for Body field
+func (r *Req) WithBody(body string) *Req {
+	r.Body = body
+	return r
+}
+
+// WithPath is a build func for Path field
+func (r *Req) WithPath(path string) *Req {
+	r.Path = path
+	return r
+}
+
+// WithParams is a build func for Params field
+func (r *Req) WithParams(params Vals) *Req {
+	r.Params = params
+	return r
+}
+
+// WithHeaders is a build func for Headers field
+func (r *Req) WithHeaders(headers Vals) *Req {
+	r.Headers = headers
+	return r
+}
+
+// WithProxyURL is a build func for ProxyURL field
+func (r *Req) WithProxyURL(proxyURL string) *Req {
+	r.ProxyURL = proxyURL
+	return r
+}
+
+// WithRetryOnTextMarkers is a build func for RetryOnTextMarkers field
+func (r *Req) WithMiddleware(funcs []func()) *Req {
+	r.Middleware = funcs
+	return r
+}
+
+// WithRetryOnTextMarkers is a build func for RetryOnTextMarkers field
+func (r *Req) WithRetryOnTextMarkers(markers []string) *Req {
+	r.RetryOnTextMarkers = markers
+	return r
+}
+
+// WithRetryOnStatusCodes is a build func for RetryOnStatusCodes field
+func (r *Req) WithRetryOnStatusCodes(codeRanges [][2]int) *Req {
+	r.RetryOnStatusCodes = codeRanges
+	return r
+}
+
+// WithAttempts is a build func for Attempts field
+func (r *Req) WithAttempts(attempts int) *Req {
+	r.Attempts = attempts
+	return r
+}
+
+// WithRetryDelayMillis is a build func for RetryDelayMillis field
+func (r *Req) WithRetryDelayMillis(millis int) *Req {
+	r.RetryDelayMillis = millis
+	return r
+}
+
+// WithTimeout is a build func for Timeout field
+func (r *Req) WithTimeout(timeout time.Duration) *Req {
+	r.Timeout = timeout
+	return r
+}
+
+// WithCookies is a build func for Cookies field
+func (r *Req) WithCookies(cookies []*http.Cookie) *Req {
+	r.Cookies = cookies
+	return r
+}
+
+// WithClient is a build func for Client field
+func (r *Req) WithClient(client *http.Client) *Req {
+	r.Client = client
+	return r
 }

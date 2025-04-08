@@ -2,11 +2,13 @@ package req
 
 import (
 	"bytes"
-	"github.com/nordborn/go-errow"
-	"github.com/nordborn/golog"
+	"fmt"
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/nordborn/go-errow"
+	"github.com/nordborn/golog"
 )
 
 func buildFullURL(base, path string, getParams Vals) (string, error) {
@@ -56,7 +58,7 @@ func delay(delayMillis int) {
 // setHeaders modifies request: it sets headers
 func setHeaders(request *http.Request, headers Vals) {
 	for _, v := range headers {
-		request.Header.Set(v.Name, v.Value)
+		request.Header.Set(v.K, fmt.Sprint(v.V))
 	}
 }
 

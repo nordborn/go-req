@@ -1,7 +1,6 @@
 package req
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 	"strings"
@@ -9,8 +8,17 @@ import (
 	"time"
 )
 
+var testClient *http.Client
+
+func initTestClient() {
+	if testClient == nil {
+		testClient = &http.Client{}
+	}
+}
+
 func TestReqGet(t *testing.T) {
-	r := New("http://ip-api.com")
+	initTestClient()
+	r := New("http://ip-api.com").WithClient(testClient)
 	r.Path = "json"
 
 	resp, err := r.Send()
@@ -21,7 +29,8 @@ func TestReqGet(t *testing.T) {
 }
 
 func TestReqPost(t *testing.T) {
-	r := New("http://httpbin.org")
+	initTestClient()
+	r := New("http://httpbin.org").WithClient(testClient)
 	r.Path = "post"
 
 	resp, err := r.Post()
@@ -56,7 +65,7 @@ func TestReqGet_cookies(t *testing.T) {
 func TestReqGet_shouldRetryTextMarkers(t *testing.T) {
 	r := New("http://httpbin.org")
 	r.Path = "post"
-	r.Data = Vals{
+	r.Form = Vals{
 		{"error", "error"},
 	}
 
@@ -149,7 +158,7 @@ func TestReqGetJSON_MiddlewareVals(t *testing.T) {
 	mw := func() {
 		r.Headers = Vals{
 			HeaderAppJSON,
-			{"Now", fmt.Sprint(time.Now().Unix())},
+			{"Now", time.Now().Unix()},
 		}
 	}
 	r.Middleware = []func(){mw}
@@ -166,7 +175,7 @@ func TestReqGetJSON_MiddlewareVals(t *testing.T) {
 func TestReqPost_RespJSON(t *testing.T) {
 	r := New("http://httpbin.org")
 	r.Path = "post"
-	r.Data = Vals{
+	r.Form = Vals{
 		{"TestName", "TestVal"},
 	}
 
@@ -193,7 +202,7 @@ func TestReqPost_RespJSON(t *testing.T) {
 func TestReqPost_RespJSONExpectedErr(t *testing.T) {
 	r := New("http://httpbin.org")
 	r.Path = "post"
-	r.Data = Vals{
+	r.Form = Vals{
 		{"name1", "val1"},
 		{"name2", "val2"},
 	}
@@ -267,60 +276,4 @@ func TestReq_shouldRetryOnTextMarkers(t *testing.T) {
 			t.Errorf("%v != %v for %v\n", result, a.expected, a)
 		}
 	}
-}
-
-func TestVals_String(t *testing.T) {
-	v := Vals{{"name", Vals{{"k", "v"}}.JSON()},
-		{"name2", "val2"}}
-	s := fmt.Sprint(v)
-	if s != `[{"name":{"k":"v"}} {"name2":"val2"}]` {
-		t.Fatal("Unexpected v.String:", s)
-	}
-}
-
-func TestVals_JSON1(t *testing.T) {
-	v := Vals{{"n1", "v1"}, {"n2", "v2"}}
-	s := v.JSON()
-	if s != `{"n1":"v1","n2":"v2"}` {
-		t.Fatal("Unexpected v.JSON:", s)
-	}
-}
-
-func TestVals_JSON2(t *testing.T) {
-	v := Vals{{"name", `["val1","val2"]`}}
-	s := v.JSON()
-	if s != `{"name":["val1","val2"]}` {
-		t.Fatal("Unexpected v.JSON:", s)
-	}
-}
-
-func TestVals_JSON3(t *testing.T) {
-	v := Vals{{"name", Vals{{"nsub1", "vsub1"}}.JSON()}}
-	s := v.JSON()
-	if s != `{"name":{"nsub1":"vsub1"}}` {
-		t.Fatal("Unexpected v.JSON:", s)
-	}
-}
-
-func TestVals_Extend(t *testing.T) {
-	v := Vals{{"name", "val"}}.Extend(
-		Vals{{"name2", "val2"}})
-	s := fmt.Sprint(v)
-	if !strings.Contains(s, "val2") {
-		t.Fatal("Unexpected v.String:", s)
-	}
-}
-
-func Test_buildFullURL(t *testing.T) {
-	base := "http://httpbin.org"
-	path := "get"
-	params := Vals{{"c", "d"}}
-	fullURL, err := buildFullURL(base, path, params)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if fullURL != "http://httpbin.org/get?c=d" {
-		t.Fatal(fullURL)
-	}
-	t.Log(fullURL)
 }

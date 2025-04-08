@@ -1,5 +1,5 @@
-github.com/nordborn/go-errow v1.0.0 h1:Q1aGSmVihsxaD3P6OV9RD6SwKfscT2cWegNua8zkb4w=
-github.com/nordborn/go-errow v1.0.0/go.mod h1:86PngXYCPhVLUGxTetqXhc6l79AKTLNDREtsIIc8M88=
+github.com/nordborn/go-errow v1.0.1 h1:RTeyRFGZJXUrF4oT8w4hSpjXe8EkLz/IdHzrPw1N80c=
+github.com/nordborn/go-errow v1.0.1/go.mod h1:86PngXYCPhVLUGxTetqXhc6l79AKTLNDREtsIIc8M88=
 github.com/nordborn/golog v0.0.0-20190110093311-983a5529802d h1:za4uJBZw6KZwoffb4M+4Qbl47pqV2OuHLzG5Ngsy1yg=
 github.com/nordborn/golog v0.0.0-20190110093311-983a5529802d/go.mod h1:FcmT7OQwuj5niEaPaxFOBpildf+RSfjy6G83EF83Tpw=
 github.com/pkg/errors v0.8.0 h1:WdK/asTD0HN+q6hsWO3/vpuAkAr+tw6aNJNDFFf0+qw=
