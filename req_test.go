@@ -277,3 +277,10 @@ func TestReq_shouldRetryOnTextMarkers(t *testing.T) {
 		}
 	}
 }
+
+func TestWithPath(t *testing.T) {
+	r := New("http://ip-api.com").WithPath("json/", 1)
+	if r.Path != "json/1" {
+		t.Error("bad path", r.Path)
+	}
+}

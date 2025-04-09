@@ -345,9 +345,9 @@ func (r *Req) WithBody(body string) *Req {
 	return r
 }
 
-// WithPath is a build func for Path field
-func (r *Req) WithPath(path string) *Req {
-	r.Path = path
+// WithPath is a build func for Path field from any parts (uses fmt.Sprint)
+func (r *Req) WithPath(parts ...any) *Req {
+	r.Path = fmt.Sprint(parts...)
 	return r
 }
 
